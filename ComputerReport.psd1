@@ -25,7 +25,8 @@ Description = ''
 PowerShellVersion = '5.0'
 
 # Functions to export from this module
-FunctionsToExport = @( 
+FunctionsToExport = @(
+    'Get-Memory'
 )
 
 # # Cmdlets to export from this module
