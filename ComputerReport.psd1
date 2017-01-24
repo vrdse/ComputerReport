@@ -26,7 +26,7 @@ PowerShellVersion = '5.0'
 
 # Functions to export from this module
 FunctionsToExport = @(
-    'Get-Memory'
+    'Get-ComputerReport'
 )
 
 # # Cmdlets to export from this module
