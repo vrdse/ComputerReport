@@ -4,8 +4,14 @@ $ModuleRoot = (Resolve-Path -Path "$PSScriptRoot\..\").Path
 
 Import-Module "$($ModuleRoot)ComputerReport.psm1"
 
-Describe "Get-Memory" {
-    It "returns memory information" {
-        Get-Memory | Should Be $true
+Describe "Get-ComputerReport" {
+    It "returns computer information" {
+        Get-ComputerReport | Should Be $true
+    }
+}
+
+Describe "Get-NetworkListener" {
+    It "returns network listener" {
+        Get-NetworkListener | Should Be $true
     }
 }
