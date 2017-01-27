@@ -15,6 +15,7 @@ function Get-NetworkListener {
     $TCPProcesses = Get-CimInstance -ClassName Win32_Process -Filter $Filter -Property ProcessId,Name,CommandLine | Select-Object -Property ProcessId,Name,CommandLine
 
     foreach ($TCPConnection in $TCPConnections) {
+		Write-Verbose "Processing $($TCPConnection.LocalPort)"
         if ($TestAll -ne $true) {
             if ($TCPConnection.LocalPort -lt 30000) {
                 $isReachable = Test-NetConnection -ComputerName $CimSession.ComputerName -Port $TCPConnection.LocalPort -InformationLevel Quiet
@@ -49,9 +50,9 @@ function Get-ComputerReport {
     }
     
     process {
-				Write-Verbose "Processing $Computer..."
         if ($ComputerName) {
             foreach ($Computer in $ComputerName) {
+				Write-Verbose "Processing $Computer..."
                 if (Test-NetConnection -ComputerName $Computer -InformationLevel Quiet) {
                     Write-Verbose "$Computer is online"
                     if ($Credential) {
