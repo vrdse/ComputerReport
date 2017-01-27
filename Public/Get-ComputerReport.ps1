@@ -2,7 +2,7 @@ function Get-NetworkListener {
     [CmdletBinding()]
     param (
         [Parameter()]
-        [CimSession]
+        [Microsoft.Management.Infrastructure.CimSession]
         $CimSession,
         [Parameter()]
         [switch]
@@ -11,6 +11,7 @@ function Get-NetworkListener {
 
     $TCPConnections = Get-NetTCPConnection -State Listen -CimSession $CimSession | Select-Object -Property LocalPort, OwningProcess
     $Filter = "ProcessId="+($($TCPConnections.OwningProcess) -join " or ProcessId=")
+	Write-Verbose "ProcessIds are $Filter"
     $TCPProcesses = Get-CimInstance -ClassName Win32_Process -Filter $Filter -Property ProcessId,Name,CommandLine | Select-Object -Property ProcessId,Name,CommandLine
 
     foreach ($TCPConnection in $TCPConnections) {
@@ -39,7 +40,7 @@ function Get-NetworkListener {
 function Get-ComputerReport {
     [CmdletBinding()]
     param (
-        [Parameter()]
+        [Parameter(ValueFromPipelineByPropertyName=$true)]
         [string[]]
         $ComputerName
     )
@@ -48,7 +49,7 @@ function Get-ComputerReport {
     }
     
     process {
-        $isOnline = $true
+				Write-Verbose "Processing $Computer..."
         if ($ComputerName) {
             foreach ($Computer in $ComputerName) {
                 if (Test-NetConnection -ComputerName $Computer -InformationLevel Quiet) {
@@ -59,14 +60,21 @@ function Get-ComputerReport {
                     else {
                         $CimSession = New-CimSession -ComputerName $Computer
                     }
-                $OperatingSystem = Get-CimInstance -ClassName Win32_OperatingSystem -CimSession $CimSession
+					
+					$OperatingSystem = Get-CimInstance -ClassName Win32_OperatingSystem -CimSession $CimSession
 
-                $Hotfix = Get-CimInstance -ClassName Win32_QuickFixEngineering -Property HotFixID,Description,Caption,InstalledOn,InstalledBy -CimSession $CimSession
-
-                $NetworkListener = Get-NetworkListener -CimSession $CimSession
-                
-
-                [PSCustomObject]@{
+					$Hotfix = Get-CimInstance -ClassName Win32_QuickFixEngineering -CimSession $CimSession |
+						Select-Object -Property HotFixID,@{Name='Type';Expression={$PSItem.Description}},@{Name='Link';Expression={$PSItem.Caption}},@{Name='InstalledOn';Expression={[DateTime]($PSItem.CimInstanceProperties | Where-Object -Property Name -EQ -Value "InstalledOn").Value}},InstalledBy
+						
+					$NetworkListener = Get-NetworkListener -CimSession $CimSession
+					
+					$isOnline = $true
+				}
+                else {
+                    Write-Verbose "$Computer is offline"
+                    $isOnline = $false
+                }
+				[PSCustomObject]@{
                     ComputerName = if ($Computer -eq $null) {$Env:COMPUTERNAME} else {$Computer}
                     OperatingSystem = $OperatingSystem.Caption
                     OSVersion = $OperatingSystem.Version
@@ -74,8 +82,8 @@ function Get-ComputerReport {
                     InstallDate = $OperatingSystem.InstallDate
                     LastReboot = $OperatingSystem.LastBootUpTime
                     Uptime = (Get-Date) - ($OperatingSystem.LastBootUpTime)
-                    LastOSUpdate = ($Hotfix | Sort-Object -Property InstalledOn -Descending | Select-Object -First 1).InstalledOn
-                    Hotfix = ($Hotfix | Select-Object -Property HotFixID,@{Name='Type';Expression={$PSItem.Description}},@{Name='Link';Expression={$PSItem.Caption}},InstalledOn,InstalledBy) 
+                    LastOSUpdate = ($Hotfix | Sort-Object -Property InstalledOn -Descending | Select-Object -Property InstalledOn -First 1).InstalledOn
+                    Hotfix = $Hotfix
                     NetworkListener = $NetworkListener
                     InstalledSoftware = "" 
                     ADObject = ""
@@ -83,13 +91,8 @@ function Get-ComputerReport {
                     LocalGroup = ""
                     LocalAdmin = ""
                     LocalPriviliges = ""
-                }
-                }
-                else {
-                    Write-Verbose "$Computer is offline"
-                    $isOnline = $false
-                }
-            }
+				}
+			}
         }
 
         
