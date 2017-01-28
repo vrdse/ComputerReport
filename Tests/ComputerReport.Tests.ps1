@@ -15,3 +15,9 @@ Describe "Get-NetworkListener" {
         Get-NetworkListener | Should Be $true
     }
 }
+
+Describe "CIM" {
+    It "returns Hardware Org" {
+        (Get-CimInstance -ClassName Win32_OperatingSystem).Organization | Should Be -not $null
+    }
+}
