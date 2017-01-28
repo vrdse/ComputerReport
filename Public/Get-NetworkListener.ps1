@@ -21,7 +21,7 @@ function Get-NetworkListener {
         $TCPProcessesArguments = @{
             ClassName   = 'Win32_Process'
             Filter      = $Filter
-            Property    = 'ProcessId,Name,CommandLine'
+            Property    = 'ProcessId','Name','CommandLine'
         }
         $TCPProcesses = Get-CimInstance @TCPProcessesArguments | 
                         Select-Object -Property ProcessId,Name,CommandLine
