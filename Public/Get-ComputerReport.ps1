@@ -14,15 +14,8 @@ function Get-ComputerReport {
             foreach ($Computer in $ComputerName) {
 				Write-Verbose "Processing $Computer..."
                 if (Test-NetConnection -ComputerName $Computer -InformationLevel Quiet) {
-                    Write-Verbose "$Computer is online"
-                    if ($Credential) {
-                        $CimSession = New-CimSession -ComputerName $Computer -Credential $Credential
-                    }
-                    else {
-                        $CimSession = New-CimSession -ComputerName $Computer
-                    }
-					
-					$OperatingSystem = Get-CimInstance -ClassName Win32_OperatingSystem -CimSession $CimSession
+                    $CimSession = NewCimSession -ComputerName $ComputerName
+					$OperatingSystem = Get-CimInstance -ClassName Win32_OperatingSystem -CimSession $CimSession #ersetzen durch @CimSession (splattered argument)
 
 					$Hotfix = Get-CimInstance -ClassName Win32_QuickFixEngineering -CimSession $CimSession |
 						Select-Object -Property HotFixID,@{Name='Type';Expression={$PSItem.Description}},@{Name='Link';Expression={$PSItem.Caption}},@{Name='InstalledOn';Expression={[DateTime]($PSItem.CimInstanceProperties | Where-Object -Property Name -EQ -Value "InstalledOn").Value}},InstalledBy
