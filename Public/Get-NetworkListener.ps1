@@ -1,12 +1,9 @@
 function Get-NetworkListener {
     [CmdletBinding()]
     param (
-        [Parameter(ParameterSetName='CimSession')]
-        [Microsoft.Management.Infrastructure.CimSession]
+        [Parameter(ParameterSetName = 'CimSession')]
+        [Microsoft.Management.Infrastructure.CimSession[]]
         $CimSession,
-        [Parameter(ParameterSetName='ComputerName')]
-        [string[]]
-        $ComputerName,
         [Parameter()]
         [ValidateSet('First1000Ports', 'First30000Ports', 'All')]
         [string]
@@ -15,16 +12,17 @@ function Get-NetworkListener {
 
     process {
         $TCPConnections = Get-NetTCPConnection -State Listen -CimSession $CimSession | 
-                          Select-Object -Property LocalPort, OwningProcess
-        $Filter = "ProcessId="+($($TCPConnections.OwningProcess) -join " or ProcessId=")
+            Select-Object -Property LocalPort, OwningProcess, PSComputerName
+        $Filter = "ProcessId=" + ($($TCPConnections.OwningProcess) -join " or ProcessId=")
         Write-Verbose "ProcessIds are $Filter"
         $TCPProcessesArguments = @{
-            ClassName   = 'Win32_Process'
-            Filter      = $Filter
-            Property    = 'ProcessId','Name','CommandLine'
+            ClassName  = 'Win32_Process'
+            Filter     = $Filter
+            Property   = 'ProcessId', 'Name', 'CommandLine'
+            CimSession = $CimSession
         }
         $TCPProcesses = Get-CimInstance @TCPProcessesArguments | 
-                        Select-Object -Property ProcessId,Name,CommandLine
+            Select-Object -Property ProcessId, Name, CommandLine
 
         switch ($TestConnection) {
             First1000Ports {$PortsToCheck = 1000}
@@ -38,8 +36,8 @@ function Get-NetworkListener {
             if ($PortsToCheck -ne $null) {
                 if ($TCPConnection.LocalPort -lt $PortsToCheck) {
                     $TestNetConnectionArguments = @{
-                        ComputerName = $CimSession.ComputerName
-                        Port = $TCPConnection.LocalPort
+                        ComputerName     = $CimSession.ComputerName
+                        Port             = $TCPConnection.LocalPort
                         InformationLevel = 'Quiet'
                     }
                     $isReachable = Test-NetConnection @TestNetConnectionArguments
@@ -51,12 +49,13 @@ function Get-NetworkListener {
             }
 
             $TCPProcess = $TCPProcesses | 
-                          Where-Object -Property ProcessId -EQ -Value $TCPConnection.OwningProcess
+                Where-Object -Property ProcessId -EQ -Value $TCPConnection.OwningProcess
             [PSCustomObject]@{
-                Port = $TCPConnection.LocalPort
-                isReachable = $isReachable
-                ProcessName = $TCPProcess.Name
-                ProcessCmd = $TCPProcess.CommandLine
+                Port         = $TCPConnection.LocalPort
+                isReachable  = $isReachable
+                ProcessName  = $TCPProcess.Name
+                ProcessCmd   = $TCPProcess.CommandLine
+                ComputerName = $CimSession.ComputerName
             }
         }
 
